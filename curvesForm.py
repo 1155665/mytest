@@ -161,7 +161,7 @@ class CurvesForm(QtWidgets.QWidget, Ui_MainWindow):
         self.close()
 
     def cb_handler(self):
-        """
+        """        
         Event handler for checkbox state changes.
 
         Updates the visibility of curves based on the checkbox states.
@@ -182,7 +182,7 @@ class CurvesForm(QtWidgets.QWidget, Ui_MainWindow):
 
     def deal_with_data_inlet(self, elapsed_time, y):
         """
-        Handles incoming curve data.
+        Handles incoming curve data. !!!!!!!!!
 
         Appends the incoming data to the data array.
         Trims the data array if it exceeds the maximum length.
