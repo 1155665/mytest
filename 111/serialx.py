@@ -5,11 +5,12 @@ from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
 from PyQt5.QtCore import QObject , pyqtSignal, QByteArray
 
 import constantValues as cv
-#import debugPrinter as dp
+import debugPrinter as dp
 from signal_generator_json import SignalGeneratorJsonx
 
 
 class SerialX(QObject):
+    """docstring for SerialX"""
     # evt_serial = pyqtSignal(str,int)
     evt_com_list = pyqtSignal(list)
     evt_serial_data = pyqtSignal(QByteArray)
@@ -87,7 +88,7 @@ class SerialX(QObject):
             self.evt_serial_cmd.emit(cv.EVT_SERIAL_OPEN_SUC)
             self.simulator_timer.start()
             self.sj = SignalGeneratorJsonx()
-            print("open simulator")
+            dp.dpt('use SignalGenerator')
             return 1
 
         self.port.setPortName(s);
@@ -106,7 +107,7 @@ class SerialX(QObject):
             # if not self.readyReadConnected:
             #     self.port.readyRead.connect(self.read_port)
             #     self.readyReadConnected=True
-            #     print('port.readyRead.connect')
+            #     dp.dpt('port.readyRead.connect')
         else:
             self.evt_serial_cmd.emit(cv.EVT_SERIAL_OPEN_FAILED)
             # print("open failed")
@@ -123,7 +124,7 @@ class SerialX(QObject):
             self.port.write(bytes(s,"ascii"))              
 
     def write_port_ack_ok(self):
-        # print('-')
+        # dp.dpt('-')
         if self.use_simulator:
             return
         if self.port.isOpen():

@@ -10,46 +10,45 @@ import subprocess
 
 from serialx import SerialX
 import constantValues as cv
-#from lslSender import LSLSender
-#import debugPrinter as dp
-#from worker import Worker
+from lslSender import LSLSender
+import debugPrinter as dp
+from worker import Worker
 
-#from lslReceiver import LSLReceiver
-#from edfSaver import EDFSaver
-#from generateModelX import GenerateModelX
-#from miPredictor import MIPredictor
-#from dSPx import DSPx
+from lslReceiver import LSLReceiver
+from edfSaver import EDFSaver
+from generateModelX import GenerateModelX
+from miPredictor import MIPredictor
+from dSPx import DSPx
 # from curctrl_mu_calculator import CurCtrlCalculator
-#from curctrl_classifier import CurCtrlClassifier
-#from curvesFormAlp import CurvesFormAlp
-'''
+from curctrl_classifier import CurCtrlClassifier
+from curvesFormAlp import CurvesFormAlp
+
 with open('mi_app/task_markers.json', 'r') as file:
     markers = json.load(file)
-'''
+
 class Controller():
-    
     def __init__(self,mainwindow,curForm):
 
         self.mw = mainwindow
-        #self.lsl = LSLSender('dummy')
+        self.lsl = LSLSender('dummy')
         self.cf = curForm
-        #self.fs = EDFSaver('./data')
+        self.fs = EDFSaver('./data')
 
-        #self.lslRcv = LSLReceiver()
-        #self.dsp = DSPx(cv.CH_NUM)
-        #self.gm = GenerateModelX('mi')
-        #self.gm_c = GenerateModelX('cc')
+        self.lslRcv = LSLReceiver()
+        self.dsp = DSPx(cv.CH_NUM)
+        self.gm = GenerateModelX('mi')
+        self.gm_c = GenerateModelX('cc')
 
         self.mp = None
         self.serial = SerialX("dummy")
         self.ccc = None
 
-        #self.cfa = CurvesFormAlp()
+        self.cfa = CurvesFormAlp()
 
-        '''
+
         with open(cv.Json_file_name, 'r') as file:
             self.usr_config_json = json.load(file)
-        '''
+
         # self.mw.new_mac(self.usr_config_json[cv.JSON_MAC_KEY_STR])
 
         self.timer_ack = QtCore.QTimer()
@@ -64,10 +63,10 @@ class Controller():
         # self.timer_search_inlet = QtCore.QTimer()
         # self.timer_search_inlet.setInterval(1000)
         # self.timer_search_inlet.timeout.connect(self.ack_timer_handler)
-        '''
+
         self.mw.evt_win.connect(self.win_evt)
         # self.mw.evt_win_data.connect(self.win_evt_data)
-        '''
+
         self.serial.evt_com_list.connect(self.serial_com_list)
         self.serial.evt_serial_cmd.connect(self.serial_evt_cmd)
         self.serial.find_serial_ports()
@@ -76,14 +75,13 @@ class Controller():
         self.threadpool = QThreadPool()
 
         self.last_pkn=None
-        '''
+
         self.lslRcv.evt_lslRcv.connect(self.lslRcv_new_data)
         self.p = None  # Default empty value.
-        '''
+        
         self.evt_serial_dataConnected = False
-        '''
+
         self.init_some()
-        '''
         self.start_time = time.time()
 
         self.psyco_marker_counter = 0
@@ -91,18 +89,18 @@ class Controller():
 
     # def __del__(self):
     #     print('del Controller')
-    '''
+
     def init_some(self):
         self.serial.open_serial(self.usr_config_json[cv.JSON_COM_KEY_STR])
         self.mw.set_combox_item(self.usr_config_json[cv.JSON_COM_KEY_STR])
-    '''
+
     def lslRcv_new_data(self,inlet_name,ts,arr):
         if (inlet_name=='mi_acc'):            
             self.cf.deal_with_data_acc_inlet(ts,arr)
-            #self.fs.new_data('acc',ts,arr)
+            self.fs.new_data('acc',ts,arr)
         if (inlet_name=='mi_eeg'):
             ## how do you want to use this eeg data
-            #self.fs.new_data('eeg',ts,arr)
+            self.fs.new_data('eeg',ts,arr)
             # arr = self.dsp.filter(arr)
             arr = self.dsp.filter_dummy(arr)            
             self.cf.deal_with_data_inlet(ts,arr)
@@ -129,20 +127,20 @@ class Controller():
             self.fs.new_data('mar',ts,arr)
             if self.mp is not None:
                 self.mp.new_marker(arr)
-        '''
+
             if arr[0]==markers['trial_end']:
                 self.psyco_marker_counter = self.psyco_marker_counter+1
-                print('trials: '+ str(self.psyco_marker_counter))
-        '''
+                dp.dpt('trials: '+ str(self.psyco_marker_counter))
+
         # if (inlet_name[:14] == 'predict_marker'):
-        #     print('--------------')
+        #     dp.dpt('--------------')
 
     def stim_on_exit(self,s):
         # if s==cv.EVT_WIN_MI_TEST:
         #     print('mi_test_on_exit')
         #     return
 
-        print('stim_on_exit')
+        dp.dpt('stim_on_exit')
         self.fs.flush_data()
         if self.mp is not None:
             self.mp.close_predict()
@@ -193,7 +191,7 @@ class Controller():
                 #     self.p.finished.connect(self.process_finished)  # Clean up once complete.
                 #     # self.p.start("python3", [task_file])
                 #     self.p.start("python", ['mi_test_task.py'])
-                #     print('EVT_WIN_MI_TEST')
+                #     dp.dpt('EVT_WIN_MI_TEST')
           # if (self.get_marker_inlet(wanted_marker_inlets)=='s'):
         #     self.p.waitForFinished()
         #     # pass
@@ -210,6 +208,10 @@ class Controller():
 
         self.stim_on_exit(s)
 
+    def new_task(self,s):
+        worker = Worker(self.run_task,s)
+        worker.autoDelete()
+        self.threadpool.start(worker)
 
     def win_evt(self,s,s2):
         if s == cv.EVT_WIN_CMD_OPEN_COM:
@@ -238,7 +240,7 @@ class Controller():
             self.cfa.close_win()
 
             self.threadpool.waitForDone()
-            print("exit ... ")
+            dp.dpt("exit ... ")
 
         elif s==cv.EVT_WIN_GENERATW_MODEL:
             self.gm.show()
@@ -253,7 +255,7 @@ class Controller():
             if filePathName:
                 if (self.new_recording()=='f'):
                     return            
-               # self.mp = MIPredictor(8)
+                self.mp = MIPredictor(8)
                 self.mp.load_model(filePathName)
                 self.mp.open_predict()
                 self.new_task(s)
@@ -267,22 +269,22 @@ class Controller():
             if (self.new_recording()=='f'):
                 return            
             self.new_task(s)
-            print('EVT_WIN_EYE_OC')
+            dp.dpt('EVT_WIN_EYE_OC')
 
         elif s==cv.EVT_WIN_CURCTRL_TRAIN:
             if (self.new_recording()=='f'):
                 return            
             self.new_task(s)
-            print('EVT_WIN_CURCTRL_TRAIN')
+            dp.dpt('EVT_WIN_CURCTRL_TRAIN')
 
         elif s==cv.EVT_WIN_CURCTRL:
-            print('EVT_WIN_CURCTRL')
+            dp.dpt('EVT_WIN_CURCTRL')
             filePathName,_ = QFileDialog.getOpenFileName(self.mw, "Select model", "./models",("mim files(*mim)"))
             # filePathName = 'D:/m_proj_23/mi/mi_app/models/new_model_bv8#p!_.mim'
             if filePathName:
                 if (self.new_recording()=='f'):
                     return            
-                #self.ccc = CurCtrlClassifier(8,128)
+                self.ccc = CurCtrlClassifier(8,128)
                 self.ccc.load_model(filePathName)
                 self.ccc.open_calculate()            
                 self.new_task(s)
@@ -322,10 +324,10 @@ class Controller():
             if not self.evt_serial_dataConnected:
                 self.serial.evt_serial_data.connect(self.deal_serial_data)
                 self.evt_serial_dataConnected=True
-                # print('evt_serial_dataConnected')
+                # dp.dpt('evt_serial_dataConnected')
             else:
                 pass
-                # print('evt_serial_data already connected ')
+                # dp.dpt('evt_serial_data already connected ')
 
             self.send_mac_to_recv()
             self.timer_set_mac.start()
@@ -342,7 +344,7 @@ class Controller():
 
             # insert zeros # I do not know how to transfer NAN in lsl, so I use 0 
             if(d>0)&(d<20):
-                print('lost package')
+                dp.dpt('lost package')
                 # print('insert zeros')
                 # e = np.zeros(shape=(8,), dtype=int)
                 # # e[:] = np.nan
@@ -361,7 +363,7 @@ class Controller():
                     e = json_data.get(cv.JSON_RECV_KEY_DATA_EEG)
                     arr = np.array(e)
                     if arr.size!=16:
-                        print('some thing wrong')
+                        dp.dpt('some thing wrong')
                         return
                     for i in range(16):
                         self.lsl.send_eeg_hb(e[i:i+1])
@@ -371,7 +373,7 @@ class Controller():
                     e = json_data.get(cv.JSON_RECV_KEY_DATA_EEG)
                     arr = np.array(e)
                     if arr.size!=80:
-                        print('some thing wrong')
+                        dp.dpt('some thing wrong')
                         return
 
                     for i in range(10):
@@ -381,7 +383,7 @@ class Controller():
                     a = json_data.get(cv.JSON_RECV_KEY_DATA_ACC)
                     arr = np.array(a)
                     if arr.size!=4:
-                        print('some thing wrong')
+                        dp.dpt('some thing wrong')
                         return
                     self.lsl.send_acc(arr)
 
@@ -391,10 +393,10 @@ class Controller():
         try:
             json_data = json.loads(bytearray(ar))
         except ValueError as e:
-            print('--- json error')
-            print(e)
-            print('###')
-            print(ar)
+            dp.dpt('--- json error')
+            dp.dpt(e)
+            dp.dpt('###')
+            dp.dpt(ar)
 
             # may not suitable
             # self.serial.write_port(cv.SERIAL_ACK_OK)
@@ -406,18 +408,18 @@ class Controller():
 
         # self.serial.write_port(cv.SERIAL_ACK_OK)
 
-        # print(json_data.keys())
+        # dp.dpt(json_data.keys())
         self.serial.write_port_ack_ok()
         self.timer_ack.start() # like feed wdg
 
         if (cv.JSON_RECV_KEY_EVT) in json_data.keys():
             s = json_data.get(cv.JSON_RECV_KEY_EVT)
             self.mw.dev_evt(s)
-            # print(s)
+            # dp.dpt(s)
 
         if (cv.JSON_RECV_KEY_MAC) in json_data.keys():
             s = json_data.get(cv.JSON_RECV_KEY_MAC)
-            # print(s)
+            # dp.dpt(s)
             self.mw.new_mac(s)
 
         if (cv.JSON_RECV_KEY_ALPHA_AMP) in json_data.keys():
